@@ -5,6 +5,17 @@ require 'cgi'
 cgi = CGI.new
 puts cgi.header('charset' => 'UTF-8')
 
+data = File.read('./plots.csv').split(',')
+data = data.slice!(270...360) + data  # 90度反時計回り
+
+plots = []
+data.each.with_index do |d, i|
+  h = d.to_i
+  next if h == -1
+  t = (i / 180.0) * Math::PI
+  plots << [Math.cos(t) * h, Math.sin(t) * h]
+end
+
 puts <<EOS
 <html>
   <head>
@@ -17,18 +28,13 @@ puts <<EOS
        function drawChart() {
          var data = new google.visualization.arrayToDataTable([
            ['X', 'Y'],
-           [8, 12],
-           [4, 5],
-           [11, 14],
-           [4, 5],
-           [3, 4],
-           [7, 7]
+           #{ plots.empty? ? '[0,0]' : plots.map(&:inspect).join(',') }
          ]);
 
          var options = {
            title: 'Sonar Plot',
-           hAxis: { minValue: -50, maxValue: 50 },
-           vAxis: { minValue: -50, maxValue: 50 },
+           hAxis: { minValue: -45, maxValue: 45 },
+           vAxis: { minValue: -45, maxValue: 45 },
            legend: 'none'
          };
 
@@ -38,6 +44,8 @@ puts <<EOS
     </script>
   </head>
   <body>
+    <h2>#{'最終送信日時 ' + File.stat('./plots.csv').mtime.strftime('%Y.%m.%d %H:%M:%S')}</h2>
+    #{ '<h3 style="color: red">No Data</h3>' if plots.empty? }
     <div id="chart_div" style="width: 600px; height: 600px;" />
   </body>
 </html>
